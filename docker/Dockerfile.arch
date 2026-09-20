@@ -1,0 +1,57 @@
+# Clean-environment test image for sharpener on Arch Linux.
+#
+# The point of this image is negative space: it installs ONLY Emacs, the
+# dotnet SDK, and the handful of tools the test harness shells out to --
+# nothing else. If the suite passes here but fails on a colleague's box
+# (or vice versa), the delta is a real dependency sharpener isn't
+# declaring. Notably this image does NOT pre-install any Emacs packages
+# beyond what ships with Emacs itself, so any `require` of a third-party
+# package (yasnippet, transient) that the tests actually exercise will
+# fail loudly here -- which is exactly what we want to discover.
+#
+# Build context is the package root: `docker build -f docker/Dockerfile.arch .`
+
+FROM archlinux:latest
+
+# Refresh and install the minimal toolchain. --noconfirm for CI; -Sy then
+# -Su folded into one to avoid partial-upgrade breakage on rolling Arch.
+# git is here only because the harness runs `git apply`-style checks in
+# some flows and it's a reasonable base tool; drop it if you want the
+# image even leaner.
+RUN pacman -Syu --noconfirm \
+    emacs-nox \
+    dotnet-sdk \
+    make \
+    git \
+    ca-certificates \
+    && pacman -Scc --noconfirm
+
+# dotnet telemetry off and a writable home for the SDK's first-run
+# scaffolding, so `dotnet new` in the sandbox tests doesn't stall or try
+# to write outside the workdir.
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
+    DOTNET_NOLOGO=1 \
+    HOME=/root \
+    SHARPENER_TEST_PKGDIR=/root/.sharpener-pkg
+
+WORKDIR /pkg
+
+# Copy the package in. .dockerignore keeps .elc and VC noise out so the
+# image never inherits a stale compiled artifact from the host.
+COPY . /pkg
+
+# Install third-party test dependencies (yasnippet) into the isolated
+# pkg dir at build time, so `make-test` in the container finds them
+# and the yasnippet gated tests run instead of skipping.
+RUN emacs -Q batch -l test/install-deps.el
+
+# Warm the dotnet SDK once at build time. This forces the first-run
+# package extraction to happen now rather than inside the timed test,
+# and -- importantly -- fails the BUILD if dotnet-sdk is somehow broken,
+# separating "environment is wrong" from "tests are wrong".
+RUN dotnet --info
+
+# Default command runs the full suite; the Makefile target is overridable
+# via `docker run ... make test-fast`.
+CMD ["make", "test"]

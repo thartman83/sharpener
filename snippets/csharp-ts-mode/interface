@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: interface
+# key: interface
+# --
+`(sharpener-yas--namespace-open)`public interface ${1:`(sharpener-yas--type-name "I")`}
+{
+    $0
+}`(sharpener-yas--namespace-close)`

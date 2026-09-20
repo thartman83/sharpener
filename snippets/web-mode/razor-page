@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: razor-page
+# key: page
+# --
+@page
+@model ${1:`(sharpener-yas--namespace-plain)`}.${2:`(sharpener-yas--type-name)`}Model
+@{
+    ViewData["Title"] = "${2:$(sharpener-yas--titleize yas-text)}";
+}
+
+<h1>$0</h1>

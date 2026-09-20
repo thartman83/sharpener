@@ -12,6 +12,11 @@ dist/
 
 # Backup files
 *~
+\#*\#
+.dir-locals.el
+.sharpener-pkg/*
+/test/*.elc
 
 # Undo-tree save-files
 *.~undo-tree
+

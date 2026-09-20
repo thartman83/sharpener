@@ -1,0 +1,52 @@
+# Cross-distro test scaffold for sharpener on Ubuntu.
+#
+# This exists to prove sharpener isn't accidentally depending on
+# Arch-specific paths or an Arch-specific dotnet layout. Ubuntu installs
+# the SDK differently (Microsoft's apt feed, versioned package names),
+# and its default dotnet install path and cert story differ from Arch's
+# /usr/share/dotnet -- so if any discovery or command code hard-coded an
+# assumption, it surfaces here.
+#
+# NOTE: Ubuntu's archive ships dotnet-sdk-8.0 for the LTS; newer SDKs
+# come from Microsoft's feed. Pin the version that matches what you want
+# to test against. This scaffold uses the distro package for simplicity;
+# swap in the Microsoft feed block below to test a specific newer SDK.
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
+    DOTNET_NOLOGO=1
+
+# emacs-nox + build tooling from the distro archive. dotnet-sdk-8.0 is in
+# Ubuntu 24.04's universe repo.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+         emacs-nox \
+         dotnet-sdk-8.0 \
+         make \
+         git \
+         ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Alternative: Microsoft feed for a specific SDK version ------------
+# Uncomment to test against an SDK newer than the distro provides.
+# RUN apt-get update && apt-get install -y wget \
+#     && wget https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb -O /tmp/ms.deb \
+#     && dpkg -i /tmp/ms.deb && rm /tmp/ms.deb \
+#     && apt-get update \
+#     && apt-get install -y dotnet-sdk-9.0 \
+#     && rm -rf /var/lib/apt/lists/*
+# ----------------------------------------------------------------------
+
+WORKDIR /pkg
+COPY . /pkg
+
+# Same dependency bootstrap as the Arch image -- one mechanism across
+# distros rather than per-distro package names.
+RUN emacs -Q -batch -l test/install-deps.el
+
+RUN dotnet --info
+
+CMD ["make", "test"]

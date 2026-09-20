@@ -1,0 +1,13 @@
+# Keep the build context clean so the image can't inherit a stale
+# compiled artifact or host-specific noise. The container must compile
+# and load from source only.
+*.elc
+.git
+.gitignore
+docker/
+*.patch
+.DS_Store
+# Editor/VC detritus
+*~
+\#*\#
+.dir-locals.el

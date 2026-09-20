@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: class
+# key: class
+# --
+`(sharpener-yas--namespace-open)`public class ${1:`(sharpener-yas--type-name)`}
+{
+    $0
+}`(sharpener-yas--namespace-close)`
